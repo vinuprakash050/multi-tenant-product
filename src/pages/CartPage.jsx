@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { getPrimaryProductImageUrl, getProductImageUrls } from "../lib/productImages";
 
 const initialCustomer = {
   name: "",
@@ -68,9 +69,14 @@ function CartPage() {
           </div>
         ) : (
           <div className="cart-list">
-            {vendorCart.map((item) => (
+            {vendorCart.map((item) => {
+              const photoCount = getProductImageUrls(item).length;
+              return (
               <article key={item.id} className="cart-item">
-                <img src={item.image} alt={item.name} />
+                <div className="cart-item-image-wrap">
+                  <img src={getPrimaryProductImageUrl(item)} alt={item.name} className="cart-item-image" />
+                  {photoCount > 1 ? <span className="cart-item-photo-count">{photoCount} photos</span> : null}
+                </div>
                 <div>
                   <h3>{item.name}</h3>
                   <p>Rs. {item.price}</p>
@@ -85,7 +91,8 @@ function CartPage() {
                   />
                 </label>
               </article>
-            ))}
+            );
+            })}
           </div>
         )}
       </section>

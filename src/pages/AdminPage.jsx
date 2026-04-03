@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ImageCropModal from "../components/ImageCropModal";
 import StatusBadge, { bookingStatuses, orderStatuses } from "../components/StatusBadge";
 import { useAppContext } from "../context/AppContext";
+import { getPrimaryProductImageUrl, getProductImageUrls } from "../lib/productImages";
 import { updateProduct } from "../services/storeService";
 
-const MAX_IMAGE_SIZE_BYTES = 350 * 1024;
+const MAX_PICK_IMAGE_BYTES = 15 * 1024 * 1024;
 const ADMIN_SESSION_PREFIX = "mv_admin_auth";
 
 const initialProduct = {
@@ -144,7 +146,9 @@ function AdminPage() {
   const [resourceForm, setResourceForm] = useState(initialBookingResource);
   const [editingProductId, setEditingProductId] = useState("");
   const [editingResourceId, setEditingResourceId] = useState("");
-  const [productImageFile, setProductImageFile] = useState(null);
+  const [productGalleryUrls, setProductGalleryUrls] = useState([]);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
@@ -156,7 +160,7 @@ function AdminPage() {
   const [loginForm, setLoginForm] = useState({ phone: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const fileInputRef = useRef(null);
+  const cropFileInputRef = useRef(null);
 
   useEffect(() => {
     if (!vendor?.slug) {
@@ -240,27 +244,69 @@ function AdminPage() {
     [orders],
   );
 
-  function fileToDataUrl(file) {
+  function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
-      if (!file) {
-        reject(new Error("Please choose an image to upload."));
-        return;
-      }
-
-      if (!file.type.startsWith("image/")) {
-        reject(new Error("Please choose a valid image file."));
-        return;
-      }
-
-      if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        reject(new Error("Image is too large. Please use an image smaller than 350 KB."));
-        return;
-      }
-
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error("Could not read the selected image."));
-      reader.readAsDataURL(file);
+      reader.onerror = () => reject(new Error("Could not read the image."));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function closeCropModal() {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    setCropImageSrc(null);
+    setCropModalOpen(false);
+  }
+
+  function handleFileChosenForCrop(event) {
+    const nextFile = event.target.files?.[0] || null;
+    setMessage("");
+    setMessageType("success");
+    event.target.value = "";
+
+    if (!nextFile) {
+      return;
+    }
+
+    if (!nextFile.type.startsWith("image/")) {
+      setMessage("Please choose a valid image file.");
+      setMessageType("error");
+      return;
+    }
+
+    if (nextFile.size > MAX_PICK_IMAGE_BYTES) {
+      setMessage("Image is too large. Please use a file under 15 MB.");
+      setMessageType("error");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(nextFile);
+    setCropImageSrc(objectUrl);
+    setCropModalOpen(true);
+  }
+
+  async function handleCroppedImageBlob(blob) {
+    try {
+      const dataUrl = await blobToDataUrl(blob);
+      setProductGalleryUrls((prev) => [...prev, dataUrl]);
+    } catch {
+      throw new Error("Could not process this photo.");
+    }
+  }
+
+  function moveGalleryImage(fromIndex, direction) {
+    setProductGalleryUrls((prev) => {
+      const toIndex = fromIndex + direction;
+      if (toIndex < 0 || toIndex >= prev.length) {
+        return prev;
+      }
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
     });
   }
 
@@ -271,17 +317,17 @@ function AdminPage() {
     setIsSubmitting(true);
 
     try {
-      let image;
-
-      if (productImageFile) {
-        image = await fileToDataUrl(productImageFile);
+      if (!productGalleryUrls.length) {
+        throw new Error("Add at least one product photo.");
       }
 
+      const primary = productGalleryUrls[0];
       const payload = {
         name: productForm.name,
         category: productForm.category,
         price: Number(productForm.price),
-        ...(image ? { image } : {}),
+        images: productGalleryUrls,
+        image: primary,
         description: productForm.description,
         heroLabel: productForm.heroLabel || "New arrival",
         features: productForm.features
@@ -293,19 +339,12 @@ function AdminPage() {
       if (editingProductId) {
         await updateProduct(editingProductId, payload);
       } else {
-        if (!image) {
-          throw new Error("Please choose an image to upload.");
-        }
-
         await addProductForVendor(payload);
       }
 
       setProductForm(initialProduct);
       setEditingProductId("");
-      setProductImageFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setProductGalleryUrls([]);
       setMessage(editingProductId ? "Product updated successfully." : "Product added successfully.");
     } catch (error) {
       setMessage(error.message);
@@ -366,35 +405,6 @@ function AdminPage() {
     }
   }
 
-  function handleImageChange(event) {
-    const nextFile = event.target.files?.[0] || null;
-    setMessage("");
-    setMessageType("success");
-
-    if (!nextFile) {
-      setProductImageFile(null);
-      return;
-    }
-
-    if (!nextFile.type.startsWith("image/")) {
-      setProductImageFile(null);
-      event.target.value = "";
-      setMessage("Please choose a valid image file.");
-      setMessageType("error");
-      return;
-    }
-
-    if (nextFile.size > MAX_IMAGE_SIZE_BYTES) {
-      setProductImageFile(null);
-      event.target.value = "";
-      setMessage("Image is too large. Please use an image smaller than 350 KB.");
-      setMessageType("error");
-      return;
-    }
-
-    setProductImageFile(nextFile);
-  }
-
   function startEditingProduct(product) {
     setActiveTab("products");
     setEditingProductId(product.id);
@@ -406,10 +416,7 @@ function AdminPage() {
       features: Array.isArray(product.features) ? product.features.join("\n") : "",
       heroLabel: product.heroLabel || "",
     });
-    setProductImageFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setProductGalleryUrls(getProductImageUrls(product));
     setMessage("");
     setMessageType("success");
   }
@@ -440,10 +447,7 @@ function AdminPage() {
   function resetProductForm() {
     setProductForm(initialProduct);
     setEditingProductId("");
-    setProductImageFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setProductGalleryUrls([]);
     setMessage("");
     setMessageType("success");
   }
@@ -921,21 +925,64 @@ function AdminPage() {
                 value={productForm.heroLabel}
                 onChange={(event) => setProductForm((current) => ({ ...current, heroLabel: event.target.value }))}
               />
-              <label className="file-input-field">
-                <span>Product image</span>
+              <div className="admin-product-photos-field">
+                <span className="admin-product-photos-label">Product photos</span>
+                <p className="admin-product-photos-hint">
+                  Add one or more images (crop step first). Photos are stored as base64 on the product in Firestore—use a few
+                  images per product so the document stays under the 1 MB limit. The first photo is the cover.
+                </p>
                 <input
-                  ref={fileInputRef}
+                  ref={cropFileInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={handleImageChange}
-                  required={!editingProductId}
+                  className="visually-hidden"
+                  onChange={handleFileChosenForCrop}
                 />
-                <small>
-                  {editingProductId
-                    ? "Choose a new image only if you want to replace the current one."
-                    : "Use a small image under 350 KB for this temporary base64 setup."}
-                </small>
-              </label>
+                <div className="admin-product-gallery">
+                  {productGalleryUrls.map((url, index) => (
+                    <div key={`${url.slice(0, 48)}-${index}`} className="admin-gallery-thumb-wrap">
+                      {index === 0 ? <span className="admin-gallery-cover-badge">Cover</span> : null}
+                      <img src={url} alt="" className="admin-gallery-thumb" />
+                      <div className="admin-gallery-thumb-actions">
+                        <button
+                          type="button"
+                          className="button button-ghost button-tiny"
+                          disabled={index === 0}
+                          onClick={() => moveGalleryImage(index, -1)}
+                          aria-label="Move photo up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="button button-ghost button-tiny"
+                          disabled={index === productGalleryUrls.length - 1}
+                          onClick={() => moveGalleryImage(index, 1)}
+                          aria-label="Move photo down"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="button button-ghost button-tiny admin-gallery-remove"
+                          onClick={() => setProductGalleryUrls((prev) => prev.filter((_, i) => i !== index))}
+                          aria-label="Remove photo"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="admin-add-photo-tile"
+                    onClick={() => cropFileInputRef.current?.click()}
+                  >
+                    <span className="admin-add-photo-plus">+</span>
+                    <span>Add photo</span>
+                  </button>
+                </div>
+              </div>
               <textarea
                 rows="4"
                 placeholder="Product description"
@@ -957,10 +1004,24 @@ function AdminPage() {
 
             {message ? <p className={`info-message ${messageType === "error" ? "info-message-error" : ""}`}>{message}</p> : null}
 
+            <ImageCropModal
+              isOpen={cropModalOpen}
+              imageSrc={cropImageSrc || ""}
+              aspect={4 / 3}
+              onClose={closeCropModal}
+              onConfirm={handleCroppedImageBlob}
+            />
+
             <div className="admin-product-list">
-              {products.map((product) => (
+              {products.map((product) => {
+                const thumbs = getProductImageUrls(product);
+                const extra = thumbs.length > 1 ? thumbs.length - 1 : 0;
+                return (
                 <article key={product.id} className="product-inline-card">
-                  <img src={product.image} alt={product.name} />
+                  <div className="product-inline-card-visual">
+                    <img src={thumbs[0] || getPrimaryProductImageUrl(product)} alt={product.name} />
+                    {extra > 0 ? <span className="product-inline-card-more">+{extra}</span> : null}
+                  </div>
                   <div>
                     <h3>{product.name}</h3>
                     <p>{product.category}</p>
@@ -972,7 +1033,8 @@ function AdminPage() {
                     </button>
                   </div>
                 </article>
-              ))}
+              );
+              })}
             </div>
           </div>
         ) : null}

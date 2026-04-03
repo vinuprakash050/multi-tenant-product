@@ -11,8 +11,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, hasFirebaseConfig, storage } from "../firebase";
+import { db, hasFirebaseConfig } from "../firebase";
 
 function requireFirebase() {
   if (!hasFirebaseConfig || !db) {
@@ -217,27 +216,6 @@ export async function updateProduct(productId, values) {
   requireFirebase();
 
   await updateDoc(doc(db, "products", productId), values);
-}
-
-export async function uploadProductImage(vendorSlug, file) {
-  requireFirebase();
-
-  if (!storage) {
-    throw new Error("Firebase Storage is not configured.");
-  }
-
-  if (!file) {
-    throw new Error("Please choose an image to upload.");
-  }
-
-  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-  const storageRef = ref(storage, `vendors/${vendorSlug}/products/${Date.now()}-${safeFileName}`);
-
-  await uploadBytes(storageRef, file, {
-    contentType: file.type || "application/octet-stream",
-  });
-
-  return getDownloadURL(storageRef);
 }
 
 export async function createOrder({ vendorSlug, cartItems, customer, totalAmount }) {

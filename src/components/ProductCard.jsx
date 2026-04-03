@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import ProductImageGallery from "./ProductImageGallery";
 
 function ProductCard({ product }) {
   const { vendor, cart, addToCart, updateCartItem } = useAppContext();
@@ -22,7 +23,7 @@ function ProductCard({ product }) {
   return (
     <article className="product-card">
       <div className="product-image-wrap">
-        <img src={product.image} alt={product.name} className="product-image" />
+        <ProductImageGallery product={product} alt={product.name} />
         <span className="product-badge">{product.heroLabel}</span>
       </div>
 

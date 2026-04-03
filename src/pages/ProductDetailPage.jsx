@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { getPrimaryProductImageUrl, getProductImageUrls } from "../lib/productImages";
 
 function ProductDetailPage() {
   const { productId } = useParams();
@@ -45,6 +47,17 @@ function ProductDetailPage() {
     updateCartItem(product.id, quantity - 1);
   };
 
+  const imageUrls = getProductImageUrls(product);
+  const galleryUrls = imageUrls.length ? imageUrls : [getPrimaryProductImageUrl(product)];
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [product.id]);
+
+  const activeSrc = galleryUrls[Math.min(activeImageIndex, galleryUrls.length - 1)] || getPrimaryProductImageUrl(product);
+  const hasGallery = galleryUrls.length > 1;
+
   return (
     <div className="page-stack">
       <div className="page-nav-bar">
@@ -57,7 +70,48 @@ function ProductDetailPage() {
       </div>
 
       <div className="product-detail">
-        <img src={product.image} alt={product.name} className="detail-image" />
+        <div className="detail-gallery">
+          <div className="detail-gallery-main">
+            <img src={activeSrc} alt={product.name} className="detail-image" />
+            {hasGallery ? (
+              <>
+                <button
+                  type="button"
+                  className="product-gallery-nav product-gallery-prev detail-gallery-nav"
+                  onClick={() => setActiveImageIndex((i) => (i - 1 + galleryUrls.length) % galleryUrls.length)}
+                  aria-label="Previous photo"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className="product-gallery-nav product-gallery-next detail-gallery-nav"
+                  onClick={() => setActiveImageIndex((i) => (i + 1) % galleryUrls.length)}
+                  aria-label="Next photo"
+                >
+                  ›
+                </button>
+              </>
+            ) : null}
+          </div>
+          {hasGallery ? (
+            <div className="detail-thumbnails" role="tablist" aria-label="Product photos">
+              {galleryUrls.map((url, i) => (
+                <button
+                  key={`${product.id}-thumb-${i}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === activeImageIndex}
+                  className={`detail-thumb ${i === activeImageIndex ? "detail-thumb-active" : ""}`}
+                  onClick={() => setActiveImageIndex(i)}
+                  aria-label={`Photo ${i + 1} of ${galleryUrls.length}`}
+                >
+                  <img src={url} alt="" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
         <div className="detail-content">
           <span className="eyebrow">{product.category}</span>
