@@ -26,7 +26,10 @@ const initialVendor = {
   bookingResourceLabel: "Court",
 };
 
-const ManageVendorsPageContent = () => {
+function ManageVendorsPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState({ phone: "", password: "" });
+  const [loginError, setLoginError] = useState("");
   const [vendors, setVendors] = useState([]);
   const [form, setForm] = useState(initialVendor);
   const [editingVendor, setEditingVendor] = useState(null);
@@ -34,7 +37,27 @@ const ManageVendorsPageContent = () => {
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [isAdminPasswordVisible, setIsAdminPasswordVisible] = useState(false);
 
+  const CREATOR_AUTH_KEY = "vendor_creator_auth";
+
+  function normalizePhone(value) {
+    return String(value || "").replace(/\s+/g, "").trim();
+  }
+
   useEffect(() => {
+    const authData = window.localStorage.getItem(CREATOR_AUTH_KEY);
+    if (authData) {
+      try {
+        JSON.parse(authData);
+        setIsAuthenticated(true);
+      } catch {
+        // Invalid
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const unsubscribe = subscribeVendors(
       (items) => {
         setVendors(items);
@@ -46,7 +69,68 @@ const ManageVendorsPageContent = () => {
       },
     );
     return unsubscribe;
-  }, []);
+  }, [isAuthenticated]);
+
+  const handleCreatorLogin = (event) => {
+    event.preventDefault();
+    const expectedPhone = normalizePhone("9994292890");
+    const expectedPassword = "123@Dragvin@qwerty";
+    const phoneMatches = normalizePhone(loginForm.phone) === expectedPhone;
+    const passwordMatches = loginForm.password === expectedPassword;
+
+    if (!phoneMatches || !passwordMatches) {
+      setLoginError("Incorrect phone number or password.");
+      return;
+    }
+
+    window.localStorage.setItem(CREATOR_AUTH_KEY, JSON.stringify({ phone: loginForm.phone, timestamp: Date.now() }));
+    setIsAuthenticated(true);
+    setLoginError("");
+    setLoginForm({ phone: "", password: "" });
+  };
+
+  const handleCreatorLogout = () => {
+    window.localStorage.removeItem(CREATOR_AUTH_KEY);
+    setIsAuthenticated(false);
+    setLoginForm({ phone: "", password: "" });
+    setLoginError("");
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="page-stack">
+        <section className="panel admin-auth-panel">
+          <div className="section-header">
+            <div>
+              <span className="eyebrow">Vendor Setup Login</span>
+              <h1>Multi-Vendor Creator</h1>
+              <p>Enter phone and password to access vendor creation tools.</p>
+            </div>
+          </div>
+          <form className="checkout-form admin-auth-form" onSubmit={handleCreatorLogin}>
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={loginForm.phone}
+              onChange={(event) => setLoginForm((current) => ({ ...current, phone: event.target.value }))}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={loginForm.password}
+              onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+              required
+            />
+            <button type="submit" className="button">
+              Login to Vendor Setup
+            </button>
+          </form>
+          {loginError ? <p className="info-message info-message-error">{loginError}</p> : null}
+        </section>
+      </div>
+    );
+  }
 
   function fileToDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -190,8 +274,8 @@ const ManageVendorsPageContent = () => {
   }
 
   return (
-    <div className="min-h-screen">
-      <section className="section-header bg-white/80 backdrop-blur-lg sticky top-0 z-10 shadow-lg">
+    <div className="page-stack">
+      <section className="section-header">
         <div>
           <span className="eyebrow">Vendor Setup</span>
           <h1>Multi-Vendor Dashboard</h1>
@@ -200,12 +284,11 @@ const ManageVendorsPageContent = () => {
         <button 
           type="button" 
           className="button button-secondary" 
-          onClick={() => window.dispatchEvent(new CustomEvent('logout-vendor-setup'))}
+          onClick={handleCreatorLogout}
         >
           Logout
         </button>
       </section>
-      
       <div className="page-wrap">
         <div className="page-stack">
           <section className="hero-panel">
@@ -403,7 +486,7 @@ const ManageVendorsPageContent = () => {
               <div className="theme-preview-panel" style={{ "--vendor-accent": form.accent, "--vendor-surface": form.surface }}>
                 <div className="theme-preview-copy">
                   <span className="eyebrow">Theme preview</span>
-                  <h1>{form.name || "Your storefront"}</h1>
+                  <h3>{form.name || "Your storefront"}</h3>
                   <p>{form.tagline || "See how the chosen accent and surface colors will feel on the storefront."}</p>
                 </div>
                 <div className="theme-preview-actions">
@@ -471,90 +554,6 @@ const ManageVendorsPageContent = () => {
       </div>
     </div>
   );
-};
-
-function ManageVendorsPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginForm, setLoginForm] = useState({ phone: "", password: "" });
-  const [loginError, setLoginError] = useState("");
-
-  const CREATOR_AUTH_KEY = "vendor_creator_auth";
-
-  function normalizePhone(value) {
-    return String(value || "").replace(/\s+/g, "").trim();
-  }
-
-  useEffect(() => {
-    const authData = window.localStorage.getItem(CREATOR_AUTH_KEY);
-    if (authData) {
-      try {
-        JSON.parse(authData);
-        setIsAuthenticated(true);
-      } catch {
-        // Invalid
-      }
-    }
-  }, []);
-
-  const handleCreatorLogin = (event) => {
-    event.preventDefault();
-    const expectedPhone = normalizePhone("9994292890");
-    const expectedPassword = "123@Dragvin@qwerty";
-    const phoneMatches = normalizePhone(loginForm.phone) === expectedPhone;
-    const passwordMatches = loginForm.password === expectedPassword;
-
-    if (!phoneMatches || !passwordMatches) {
-      setLoginError("Incorrect phone number or password.");
-      return;
-    }
-
-    window.localStorage.setItem(CREATOR_AUTH_KEY, JSON.stringify({ phone: loginForm.phone, timestamp: Date.now() }));
-    setIsAuthenticated(true);
-    setLoginError("");
-    setLoginForm({ phone: "", password: "" });
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <section className="panel admin-auth-panel shadow-2xl bg-white/90 backdrop-blur-xl">
-            <div className="section-header">
-              <div>
-                <span className="eyebrow">Vendor Setup Login</span>
-                <h1 className="text-3xl font-bold mb-2">Multi-Vendor Creator</h1>
-                <p className="text-lg">Enter phone and password to access vendor creation tools.</p>
-              </div>
-            </div>
-            <form className="checkout-form admin-auth-form p-8" onSubmit={handleCreatorLogin}>
-              <input
-                type="tel"
-                placeholder="Phone number (9994292890)"
-                value={loginForm.phone}
-                onChange={(event) => setLoginForm((current) => ({ ...current, phone: event.target.value }))}
-                className="mb-4"
-                required
-              />
-              <input
-                type="password"
-                placeholder="Password (123@Dragvin@qwerty)"
-                value={loginForm.password}
-                onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-                className="mb-6"
-                required
-              />
-              <button type="submit" className="button w-full text-lg py-3">
-                Login to Vendor Setup
-              </button>
-              {loginError ? <p className="info-message info-message-error mt-4 text-center">{loginError}</p> : null}
-            </form>
-          </section>
-        </div>
-      </div>
-    );
-  }
-
-  return <ManageVendorsPageContent />;
 }
 
 export default ManageVendorsPage;
