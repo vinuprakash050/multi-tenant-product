@@ -517,6 +517,68 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.vendor-payments-block {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.vendor-payments-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vendor-payments-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--vendor-accent, #1f6feb);
+}
+
+.vendor-payments-help {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.vendor-payments-help code {
+  font-size: 0.8rem;
+  background: #e2e8f0;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+}
+
+.vendor-list-payments-badge {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.razorpay-test-panel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.razorpay-test-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
 .admin-form-grid textarea,
 .admin-form-grid button,
 .booking-form-grid textarea,

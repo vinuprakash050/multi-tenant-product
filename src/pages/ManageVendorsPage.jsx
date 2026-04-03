@@ -24,6 +24,8 @@ const initialVendor = {
   adminPassword: "",
   bookingLabel: "Book a slot",
   bookingResourceLabel: "Court",
+  paymentsEnabled: false,
+  razorpayKeyId: "",
 };
 
 function ManageVendorsPage() {
@@ -159,6 +161,8 @@ function ManageVendorsPage() {
     const payload = {
       ...form,
       slug,
+      paymentsEnabled: Boolean(form.paymentsEnabled),
+      razorpayKeyId: String(form.razorpayKeyId || "").trim(),
       highlights: form.highlights
         .split("\n")
         .map((item) => item.trim())
@@ -201,6 +205,8 @@ function ManageVendorsPage() {
       adminPassword: vendor.adminPassword || "",
       bookingLabel: vendor.bookingLabel || "Book a slot",
       bookingResourceLabel: vendor.bookingResourceLabel || "Court",
+      paymentsEnabled: Boolean(vendor.paymentsEnabled),
+      razorpayKeyId: vendor.razorpayKeyId || "",
     });
     setMessage("");
   }
@@ -377,6 +383,7 @@ function ManageVendorsPage() {
                     ...current,
                     businessModel: event.target.value,
                     shopCategory: event.target.value === "booking" ? "booking" : "buy_sell",
+                    ...(event.target.value === "booking" ? { paymentsEnabled: false, razorpayKeyId: "" } : {}),
                   }))
                 }
               >
@@ -462,6 +469,34 @@ function ManageVendorsPage() {
                 onChange={(event) => setForm((current) => ({ ...current, featuredHeading: event.target.value }))}
                 required
               />
+              {form.businessModel === "commerce" ? (
+                <div className="vendor-payments-block">
+                  <label className="vendor-payments-toggle">
+                    <input
+                      type="checkbox"
+                      checked={form.paymentsEnabled}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, paymentsEnabled: event.target.checked }))
+                      }
+                    />
+                    <span>Enable Razorpay checkout (test / dev)</span>
+                  </label>
+                  <p className="vendor-payments-help">
+                    Per-vendor toggle. Use a Razorpay <strong>test</strong> Key ID from the vendor dashboard (or leave
+                    blank and set <code>VITE_RAZORPAY_KEY_ID</code> in <code>.env</code> for local demos). Live mode later
+                    needs server-side order creation and signature verification.
+                  </p>
+                  {form.paymentsEnabled ? (
+                    <input
+                      type="text"
+                      placeholder="Razorpay Key ID (rzp_test_…), optional if using .env fallback"
+                      value={form.razorpayKeyId}
+                      onChange={(event) => setForm((current) => ({ ...current, razorpayKeyId: event.target.value }))}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+
               {form.businessModel === "booking" ? (
                 <>
                   <input
@@ -533,6 +568,9 @@ function ManageVendorsPage() {
                         {vendor.shopCategory || "general"}
                       </p>
                       <p>Admin: {vendor.adminPhone || "Not configured"}</p>
+                      {vendor.businessModel === "commerce" && vendor.paymentsEnabled ? (
+                        <p className="vendor-list-payments-badge">Razorpay test checkout enabled</p>
+                      ) : null}
                     </div>
                     <div className="card-actions">
                       <button type="button" className="button button-secondary" onClick={() => startEditingVendor(vendor)}>
