@@ -2,7 +2,22 @@ import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 
 function ProductCard({ product }) {
-  const { vendor, addToCart } = useAppContext();
+  const { vendor, cart, addToCart, updateCartItem } = useAppContext();
+
+  const cartItem = cart.find((item) => item.id === product.id && item.vendorSlug === vendor.slug);
+  const quantity = cartItem ? cartItem.quantity : 0;
+
+  const handleAddToCart = () => {
+    addToCart(product);
+  };
+
+  const handleIncrease = () => {
+    updateCartItem(product.id, quantity + 1);
+  };
+
+  const handleDecrease = () => {
+    updateCartItem(product.id, quantity - 1);
+  };
 
   return (
     <article className="product-card">
@@ -24,9 +39,21 @@ function ProductCard({ product }) {
           <Link to={`/${vendor.slug}/products/${product.id}`} className="button button-secondary">
             View details
           </Link>
-          <button type="button" className="button" onClick={() => addToCart(product)}>
-            Add to cart
-          </button>
+          {quantity === 0 ? (
+            <button type="button" className="button" onClick={handleAddToCart}>
+              Add to cart
+            </button>
+          ) : (
+            <div className="quantity-controls">
+              <button type="button" className="quantity-btn" onClick={handleDecrease}>
+                -
+              </button>
+              <span className="quantity-display">{quantity}</span>
+              <button type="button" className="quantity-btn" onClick={handleIncrease}>
+                +
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </article>

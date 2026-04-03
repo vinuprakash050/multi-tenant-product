@@ -366,6 +366,43 @@ select {
   border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  padding: 0.5rem;
+}
+
+.quantity-btn {
+  border: none;
+  background: transparent;
+  color: var(--vendor-accent, #ea580c);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 160ms ease;
+}
+
+.quantity-btn:hover {
+  background: rgba(234, 88, 12, 0.1);
+}
+
+.quantity-display {
+  font-weight: 700;
+  color: var(--vendor-accent, #ea580c);
+  min-width: 2rem;
+  text-align: center;
+}
+
 .section-header {
   display: flex;
   align-items: end;
