@@ -26,13 +26,27 @@ const initialVendor = {
   bookingResourceLabel: "Court",
 };
 
-function ManageVendorsPage() {
+const ManageVendorsPageContent = () => {
   const [vendors, setVendors] = useState([]);
   const [form, setForm] = useState(initialVendor);
   const [editingVendor, setEditingVendor] = useState(null);
   const [message, setMessage] = useState("");
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [isAdminPasswordVisible, setIsAdminPasswordVisible] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeVendors(
+      (items) => {
+        setVendors(items);
+        setIsLoadingVendors(false);
+      },
+      (error) => {
+        setMessage(error.message);
+        setIsLoadingVendors(false);
+      },
+    );
+    return unsubscribe;
+  }, []);
 
   function fileToDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -52,20 +66,6 @@ function ManageVendorsPage() {
       reader.readAsDataURL(file);
     });
   }
-
-  useEffect(() => {
-    const unsubscribe = subscribeVendors(
-      (items) => {
-        setVendors(items);
-        setIsLoadingVendors(false);
-      },
-      (error) => {
-        setMessage(error.message);
-        setIsLoadingVendors(false);
-      },
-    );
-    return unsubscribe;
-  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -190,270 +190,372 @@ function ManageVendorsPage() {
   }
 
   return (
-    <div className="page-wrap">
-      <div className="page-stack">
-        <section className="hero-panel">
-          <div>
-            <span className="eyebrow">Vendor setup</span>
-            <h1>Create vendors directly in Firebase.</h1>
-            <p>
-              This page creates vendor storefronts in Firestore. You can set vendors up as a regular buy/sell store or
-              as a booking-based business such as badminton courts, cricket nets, turf grounds, salons, or studios.
-            </p>
-          </div>
-          <div className="hero-card">
-            <h2>How it works</h2>
-            <ul className="feature-list">
-              <li>Create a vendor here</li>
-              <li>Choose `commerce` for products or `booking` for slot-based websites</li>
-              <li>Open `/{'{vendor-slug}'}/admin` to manage the catalog or booking slots</li>
-              <li>Each vendor gets a storefront matched to its category</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="section-header">
+    <div className="min-h-screen">
+      <section className="section-header bg-white/80 backdrop-blur-lg sticky top-0 z-10 shadow-lg">
+        <div>
+          <span className="eyebrow">Vendor Setup</span>
+          <h1>Multi-Vendor Dashboard</h1>
+          <p>Create and manage vendor storefronts.</p>
+        </div>
+        <button 
+          type="button" 
+          className="button button-secondary" 
+          onClick={() => window.dispatchEvent(new CustomEvent('logout-vendor-setup'))}
+        >
+          Logout
+        </button>
+      </section>
+      
+      <div className="page-wrap">
+        <div className="page-stack">
+          <section className="hero-panel">
             <div>
-              <span className="eyebrow">{editingVendor ? "Edit vendor" : "New vendor"}</span>
-              <h2>{editingVendor ? "Update storefront" : "Create storefront"}</h2>
+              <span className="eyebrow">Vendor setup</span>
+              <h1>Create vendors directly in Firebase.</h1>
+              <p>
+                This page creates vendor storefronts in Firestore. You can set vendors up as a regular buy/sell store or
+                as a booking-based business such as badminton courts, cricket nets, turf grounds, salons, or studios.
+              </p>
             </div>
-            {editingVendor ? (
-              <button type="button" className="button button-secondary" onClick={resetVendorForm}>
-                Cancel edit
-              </button>
-            ) : null}
-          </div>
+            <div className="hero-card">
+              <h2>How it works</h2>
+              <ul className="feature-list">
+                <li>Create a vendor here</li>
+                <li>Choose `commerce` for products or `booking` for slot-based websites</li>
+                <li>Open `/{'{vendor-slug}'}/admin` to manage the catalog or booking slots</li>
+                <li>Each vendor gets a storefront matched to its category</li>
+              </ul>
+            </div>
+          </section>
 
-          <form className="checkout-form admin-form-grid" onSubmit={handleSubmit}>
-            <input
-              type="text"
-              placeholder="Vendor name"
-              value={form.name}
-              onChange={(event) => {
-                const name = event.target.value;
-                setForm((current) => ({
-                  ...current,
-                  name,
-                  slug: slugifyVendorName(name),
-                }));
-              }}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Slug"
-              value={form.slug}
-              onChange={(event) => setForm((current) => ({ ...current, slug: slugifyVendorName(event.target.value) }))}
-              required
-            />
-            <div className="logo-field">
-              <div className="logo-field-preview">
-                {form.logo ? <img src={form.logo} alt={`${form.name || "Vendor"} logo`} /> : <span>No logo</span>}
+          <section className="panel">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">{editingVendor ? "Edit vendor" : "New vendor"}</span>
+                <h2>{editingVendor ? "Update storefront" : "Create storefront"}</h2>
               </div>
-              <div className="logo-field-controls">
-                <input
-                  type="text"
-                  placeholder="Logo image URL (optional)"
-                  value={form.logo}
-                  onChange={(event) => setForm((current) => ({ ...current, logo: event.target.value }))}
-                />
-                <label className="file-input-field">
-                  <span>Upload logo</span>
-                  <input type="file" accept="image/*" onChange={handleLogoChange} />
-                </label>
-              </div>
+              {editingVendor ? (
+                <button type="button" className="button button-secondary" onClick={resetVendorForm}>
+                  Cancel edit
+                </button>
+              ) : null}
             </div>
-            <input
-              type="text"
-              placeholder="Tagline"
-              value={form.tagline}
-              onChange={(event) => setForm((current) => ({ ...current, tagline: event.target.value }))}
-              required
-            />
-            <select
-              value={form.businessModel}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  businessModel: event.target.value,
-                  shopCategory: event.target.value === "booking" ? "booking" : "buy_sell",
-                }))
-              }
-            >
-              <option value="commerce">Commerce website</option>
-              <option value="booking">Booking website</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Shop category"
-              value={form.shopCategory}
-              onChange={(event) => setForm((current) => ({ ...current, shopCategory: event.target.value }))}
-              required
-            />
-            <input
-              type="email"
-              placeholder="Support email"
-              value={form.supportEmail}
-              onChange={(event) => setForm((current) => ({ ...current, supportEmail: event.target.value }))}
-              required
-            />
-            <input
-              type="tel"
-              placeholder="Admin phone number"
-              value={form.adminPhone}
-              onChange={(event) => setForm((current) => ({ ...current, adminPhone: event.target.value }))}
-              required
-            />
-            <div className="password-field">
+
+            <form className="checkout-form admin-form-grid" onSubmit={handleSubmit}>
               <input
-                type={isAdminPasswordVisible ? "text" : "password"}
-                placeholder="Admin password"
-                value={form.adminPassword}
-                onChange={(event) => setForm((current) => ({ ...current, adminPassword: event.target.value }))}
+                type="text"
+                placeholder="Vendor name"
+                value={form.name}
+                onChange={(event) => {
+                  const name = event.target.value;
+                  setForm((current) => ({
+                    ...current,
+                    name,
+                    slug: slugifyVendorName(name),
+                  }));
+                }}
                 required
               />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setIsAdminPasswordVisible((current) => !current)}
+              <input
+                type="text"
+                placeholder="Slug"
+                value={form.slug}
+                onChange={(event) => setForm((current) => ({ ...current, slug: slugifyVendorName(event.target.value) }))}
+                required
+              />
+              <div className="logo-field">
+                <div className="logo-field-preview">
+                  {form.logo ? <img src={form.logo} alt={`${form.name || "Vendor"} logo`} /> : <span>No logo</span>}
+                </div>
+                <div className="logo-field-controls">
+                  <input
+                    type="text"
+                    placeholder="Logo image URL (optional)"
+                    value={form.logo}
+                    onChange={(event) => setForm((current) => ({ ...current, logo: event.target.value }))}
+                  />
+                  <label className="file-input-field">
+                    <span>Upload logo</span>
+                    <input type="file" accept="image/*" onChange={handleLogoChange} />
+                  </label>
+                </div>
+              </div>
+              <input
+                type="text"
+                placeholder="Tagline"
+                value={form.tagline}
+                onChange={(event) => setForm((current) => ({ ...current, tagline: event.target.value }))}
+                required
+              />
+              <select
+                value={form.businessModel}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    businessModel: event.target.value,
+                    shopCategory: event.target.value === "booking" ? "booking" : "buy_sell",
+                  }))
+                }
               >
-                {isAdminPasswordVisible ? "Hide" : "Show"}
+                <option value="commerce">Commerce website</option>
+                <option value="booking">Booking website</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Shop category"
+                value={form.shopCategory}
+                onChange={(event) => setForm((current) => ({ ...current, shopCategory: event.target.value }))}
+                required
+              />
+              <input
+                type="email"
+                placeholder="Support email"
+                value={form.supportEmail}
+                onChange={(event) => setForm((current) => ({ ...current, supportEmail: event.target.value }))}
+                required
+              />
+              <input
+                type="tel"
+                placeholder="Admin phone number"
+                value={form.adminPhone}
+                onChange={(event) => setForm((current) => ({ ...current, adminPhone: event.target.value }))}
+                required
+              />
+              <div className="password-field">
+                <input
+                  type={isAdminPasswordVisible ? "text" : "password"}
+                  placeholder="Admin password"
+                  value={form.adminPassword}
+                  onChange={(event) => setForm((current) => ({ ...current, adminPassword: event.target.value }))}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setIsAdminPasswordVisible((current) => !current)}
+                >
+                  {isAdminPasswordVisible ? "Hide" : "Show"}
+                </button>
+              </div>
+              <div className="theme-picker-shell">
+                {renderThemeField({
+                  label: "Accent color",
+                  value: form.accent,
+                  presets: ACCENT_PRESETS,
+                  field: "accent",
+                })}
+                {renderThemeField({
+                  label: "Surface color",
+                  value: form.surface,
+                  presets: SURFACE_PRESETS,
+                  field: "surface",
+                })}
+              </div>
+              <textarea
+                rows="4"
+                placeholder="Hero description"
+                value={form.heroDescription}
+                onChange={(event) => setForm((current) => ({ ...current, heroDescription: event.target.value }))}
+                required
+              />
+              <textarea
+                rows="4"
+                placeholder="Overview"
+                value={form.overview}
+                onChange={(event) => setForm((current) => ({ ...current, overview: event.target.value }))}
+                required
+              />
+              <textarea
+                rows="4"
+                placeholder="Highlights, one per line"
+                value={form.highlights}
+                onChange={(event) => setForm((current) => ({ ...current, highlights: event.target.value }))}
+                required
+              />
+              <input
+                type="text"
+                placeholder="Featured heading"
+                value={form.featuredHeading}
+                onChange={(event) => setForm((current) => ({ ...current, featuredHeading: event.target.value }))}
+                required
+              />
+              {form.businessModel === "booking" ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Primary CTA label"
+                    value={form.bookingLabel}
+                    onChange={(event) => setForm((current) => ({ ...current, bookingLabel: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Resource label"
+                    value={form.bookingResourceLabel}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, bookingResourceLabel: event.target.value }))
+                    }
+                    required
+                  />
+                </>
+              ) : null}
+
+              <div className="theme-preview-panel" style={{ "--vendor-accent": form.accent, "--vendor-surface": form.surface }}>
+                <div className="theme-preview-copy">
+                  <span className="eyebrow">Theme preview</span>
+                  <h1>{form.name || "Your storefront"}</h1>
+                  <p>{form.tagline || "See how the chosen accent and surface colors will feel on the storefront."}</p>
+                </div>
+                <div className="theme-preview-actions">
+                  <span className="theme-preview-pill">Accent</span>
+                  <span className="theme-preview-pill theme-preview-pill-secondary">Surface</span>
+                </div>
+              </div>
+
+              <button type="submit" className="button">
+                {editingVendor ? "Save vendor" : "Create vendor"}
               </button>
-            </div>
-            <div className="theme-picker-shell">
-              {renderThemeField({
-                label: "Accent color",
-                value: form.accent,
-                presets: ACCENT_PRESETS,
-                field: "accent",
-              })}
-              {renderThemeField({
-                label: "Surface color",
-                value: form.surface,
-                presets: SURFACE_PRESETS,
-                field: "surface",
-              })}
-            </div>
-            <textarea
-              rows="4"
-              placeholder="Hero description"
-              value={form.heroDescription}
-              onChange={(event) => setForm((current) => ({ ...current, heroDescription: event.target.value }))}
-              required
-            />
-            <textarea
-              rows="4"
-              placeholder="Overview"
-              value={form.overview}
-              onChange={(event) => setForm((current) => ({ ...current, overview: event.target.value }))}
-              required
-            />
-            <textarea
-              rows="4"
-              placeholder={"Highlights, one per line"}
-              value={form.highlights}
-              onChange={(event) => setForm((current) => ({ ...current, highlights: event.target.value }))}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Featured heading"
-              value={form.featuredHeading}
-              onChange={(event) => setForm((current) => ({ ...current, featuredHeading: event.target.value }))}
-              required
-            />
-            {form.businessModel === "booking" ? (
-              <>
-                <input
-                  type="text"
-                  placeholder="Primary CTA label"
-                  value={form.bookingLabel}
-                  onChange={(event) => setForm((current) => ({ ...current, bookingLabel: event.target.value }))}
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Resource label"
-                  value={form.bookingResourceLabel}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, bookingResourceLabel: event.target.value }))
-                  }
-                  required
-                />
-              </>
-            ) : null}
+            </form>
 
-            <div className="theme-preview-panel" style={{ "--vendor-accent": form.accent, "--vendor-surface": form.surface }}>
-              <div className="theme-preview-copy">
-                <span className="eyebrow">Theme preview</span>
-                <h3>{form.name || "Your storefront"}</h3>
-                <p>{form.tagline || "See how the chosen accent and surface colors will feel on the storefront."}</p>
-              </div>
-              <div className="theme-preview-actions">
-                <span className="theme-preview-pill">Accent</span>
-                <span className="theme-preview-pill theme-preview-pill-secondary">Surface</span>
+            {message ? <p className="info-message">{message}</p> : null}
+          </section>
+
+          <section className="panel">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">Existing vendors</span>
+                <h2>Firebase storefronts</h2>
               </div>
             </div>
 
-            <button type="submit" className="button">
-              {editingVendor ? "Save vendor" : "Create vendor"}
-            </button>
-          </form>
-
-          {message ? <p className="info-message">{message}</p> : null}
-        </section>
-
-        <section className="panel">
-          <div className="section-header">
-            <div>
-              <span className="eyebrow">Existing vendors</span>
-              <h2>Firebase storefronts</h2>
-            </div>
-          </div>
-
-          {isLoadingVendors ? (
-            <p>Loading vendors...</p>
-          ) : !vendors.length ? (
-            <p>No vendors found in Firebase yet.</p>
-          ) : (
-            <div className="admin-product-list">
-{vendors.map((vendor) => (
-                <article key={vendor.slug} className="product-inline-card">
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                      {vendor.logo ? <img src={vendor.logo} alt={`${vendor.name} logo`} className="vendor-list-logo" /> : null}
-                      <div>
-                        <h3>{vendor.name}</h3>
+            {isLoadingVendors ? (
+              <p>Loading vendors...</p>
+            ) : !vendors.length ? (
+              <p>No vendors found in Firebase yet.</p>
+            ) : (
+              <div className="admin-product-list">
+                {vendors.map((vendor) => (
+                  <article key={vendor.slug} className="product-inline-card">
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                        {vendor.logo ? <img src={vendor.logo} alt={`${vendor.name} logo`} className="vendor-list-logo" /> : null}
+                        <div>
+                          <h3>{vendor.name}</h3>
+                        </div>
                       </div>
+                      <p>/{vendor.slug}</p>
+                      <p>{vendor.tagline}</p>
+                      <p>
+                        {vendor.businessModel === "booking" ? "Booking website" : "Commerce website"} •{" "}
+                        {vendor.shopCategory || "general"}
+                      </p>
+                      <p>Admin: {vendor.adminPhone || "Not configured"}</p>
                     </div>
-                    <p>/{vendor.slug}</p>
-                    <p>{vendor.tagline}</p>
-                    <p>
-                      {vendor.businessModel === "booking" ? "Booking website" : "Commerce website"} •{" "}
-                      {vendor.shopCategory || "general"}
-                    </p>
-                    <p>Admin: {vendor.adminPhone || "Not configured"}</p>
-                  </div>
-                  <div className="card-actions">
-                    <button type="button" className="button button-secondary" onClick={() => startEditingVendor(vendor)}>
-                      Edit store
-                    </button>
-                    <Link to={`/${vendor.slug}`} className="button button-secondary">
-                      Open store
-                    </Link>
-                    <Link to={`/${vendor.slug}/admin`} className="button">
-                      Open admin
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+                    <div className="card-actions">
+                      <button type="button" className="button button-secondary" onClick={() => startEditingVendor(vendor)}>
+                        Edit store
+                      </button>
+                      <Link to={`/${vendor.slug}`} className="button button-secondary">
+                        Open store
+                      </Link>
+                      <Link to={`/${vendor.slug}/admin`} className="button">
+                        Open admin
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );
+};
+
+function ManageVendorsPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState({ phone: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+
+  const CREATOR_AUTH_KEY = "vendor_creator_auth";
+
+  function normalizePhone(value) {
+    return String(value || "").replace(/\s+/g, "").trim();
+  }
+
+  useEffect(() => {
+    const authData = window.localStorage.getItem(CREATOR_AUTH_KEY);
+    if (authData) {
+      try {
+        JSON.parse(authData);
+        setIsAuthenticated(true);
+      } catch {
+        // Invalid
+      }
+    }
+  }, []);
+
+  const handleCreatorLogin = (event) => {
+    event.preventDefault();
+    const expectedPhone = normalizePhone("9994292890");
+    const expectedPassword = "123@Dragvin@qwerty";
+    const phoneMatches = normalizePhone(loginForm.phone) === expectedPhone;
+    const passwordMatches = loginForm.password === expectedPassword;
+
+    if (!phoneMatches || !passwordMatches) {
+      setLoginError("Incorrect phone number or password.");
+      return;
+    }
+
+    window.localStorage.setItem(CREATOR_AUTH_KEY, JSON.stringify({ phone: loginForm.phone, timestamp: Date.now() }));
+    setIsAuthenticated(true);
+    setLoginError("");
+    setLoginForm({ phone: "", password: "" });
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <section className="panel admin-auth-panel shadow-2xl bg-white/90 backdrop-blur-xl">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">Vendor Setup Login</span>
+                <h1 className="text-3xl font-bold mb-2">Multi-Vendor Creator</h1>
+                <p className="text-lg">Enter phone and password to access vendor creation tools.</p>
+              </div>
+            </div>
+            <form className="checkout-form admin-auth-form p-8" onSubmit={handleCreatorLogin}>
+              <input
+                type="tel"
+                placeholder="Phone number (9994292890)"
+                value={loginForm.phone}
+                onChange={(event) => setLoginForm((current) => ({ ...current, phone: event.target.value }))}
+                className="mb-4"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password (123@Dragvin@qwerty)"
+                value={loginForm.password}
+                onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+                className="mb-6"
+                required
+              />
+              <button type="submit" className="button w-full text-lg py-3">
+                Login to Vendor Setup
+              </button>
+              {loginError ? <p className="info-message info-message-error mt-4 text-center">{loginError}</p> : null}
+            </form>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  return <ManageVendorsPageContent />;
 }
 
 export default ManageVendorsPage;
+
